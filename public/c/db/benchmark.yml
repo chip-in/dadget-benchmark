@@ -1,0 +1,11 @@
+indexes:
+  -
+    index:
+      subset: 1
+subsets:
+  wholeContents:
+    priority: 0
+  subsetContents:
+    query:
+      subset: true
+    priority: 10

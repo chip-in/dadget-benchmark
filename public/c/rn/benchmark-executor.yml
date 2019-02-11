@@ -1,0 +1,11 @@
+name: benchmark-executor
+serviceEngines:
+- class: DatabaseRegistry
+  database: benchmark
+  metadata:
+    {% ciNodeConfig ref="/c/db/benchmark.yml" %}
+- class: Dadget
+  database: benchmark
+- class: QueryHandler
+  database: benchmark
+  subset: wholeContents

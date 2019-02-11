@@ -1,0 +1,22 @@
+{
+  "name": "@chip-in/dadget-benchmark",
+  "version": "0.0.1",
+  "description": "",
+  "dependencies": {
+    "@chip-in/dadget": "0.1.2-d3",
+    "@chip-in/resource-node": "0.0.18-d7",
+    "argv": "0.0.2",
+    "async-lock": "^1.1.4"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-preset-es2015": "^6.24.1"
+  },
+  "scripts": {
+    "start": "node lib/benchmark.js",
+    "server": "node lib/server.js",
+    "build": "babel src -d lib"
+  },
+  "author": "",
+  "license": "MIT"
+}
