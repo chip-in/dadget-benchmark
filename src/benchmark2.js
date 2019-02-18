@@ -34,6 +34,12 @@ argv.option([
     short: 's',
     type: 'int',
     description: 'データサイズ(KiB)'
+  },
+  {
+    name: 'length',
+    short: 'l',
+    type: 'int',
+    description: 'データ数'
   }
 ]);
 
@@ -42,7 +48,8 @@ let parallel = options.parallel;
 let interval = options.interval;
 let time = options.time;
 let size = options.size;
-if (!parallel || !interval || !time || !size) {
+let length = options.length;
+if (!parallel || !interval || !time || !size | !length) {
   argv.help();
   process.exit();
 }
@@ -50,20 +57,16 @@ if (!parallel || !interval || !time || !size) {
 if (cluster.isMaster) {
   let counts = [];
   let queryTimes = [];
-  let updateTimes = [];
   for (let i = 0; i < parallel; i++) {
     let worker = cluster.fork();
     worker.on('message', function (msg) {
       counts.push(msg.count);
       queryTimes.push(msg.queryTime);
-      updateTimes.push(msg.updateTime);
       if (counts.length == parallel) {
         let count = counts.reduce((a, x) => a += x, 0);
         let queryTime = Math.round(queryTimes.reduce((a, x) => a += x, 0) / count);
-        let updateTime = Math.round(updateTimes.reduce((a, x) => a += x, 0) / count);
         console.log('total count: ' + count);
         console.log('mean query time(ms): ' + queryTime);
-        console.log('mean update time(ms): ' + updateTime);
       }
     });
   }
@@ -90,10 +93,10 @@ function doWorker() {
     var lock = new AsyncLock();
     let count = 0;
     let queryTime = 0;
-    let updateTime = 0;
     let finish = false;
-    let dataLength = Math.floor((size * 1024 - 94) / 10);
-    insertData(dadget, dataLength)
+    let dataLength = Math.floor((size * 1024 - 100) / 10);
+    let testNo = getRandomInt(100000000, 999999999);
+    insertData(dadget, dataLength, length, testNo)
       .then((target) => {
         let startTime = (new Date()).getTime();
         let intervalID = setInterval(() => {
@@ -103,29 +106,16 @@ function doWorker() {
           }
           lock.acquire("interval", () => {
             let start = new Date();
-            return query(dadget, target._id)
+            return query(dadget, testNo)
               .then((result) => {
                 let time = (new Date()).getTime() - start.getTime();
                 // console.log("query time: " + time);
                 queryTime += time;
-                start = new Date();
-                return updateData(dadget, result);
-              })
-              .then((result) => {
-                let time = (new Date()).getTime() - start.getTime();
-                // console.log("update time: " + time);
-                updateTime += time;
                 count++;
-                console.log("update:" + count);
+                console.log("query:" + count);
                 if (finish) {
-                  if (result.count != count) {
-                    console.error("count check error");
-                  }
-                  if (result.data.length != dataLength) {
-                    console.error("data.length check error");
-                  }
-                  process.send({ count, queryTime, updateTime });
-                  return deleteData(dadget, result)
+                  process.send({ count, queryTime });
+                  return deleteData(dadget, testNo)
                     .then(() => process.exit());
                 }
               })
@@ -138,50 +128,43 @@ function doWorker() {
   })
 }
 
-function query(dadget, id) {
-  return dadget.query({ _id: id });
+function query(dadget, testNo) {
+  return dadget.query({ test_no: testNo });
 }
 
 function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min)) + min;
 }
 
-function insertData(dadget, dataLength) {
-  let id = Dadget.uuidGen();
-  let data = new Array(dataLength);
-  for (let i = 0; i < dataLength; i++) {
-    data[i] = getRandomInt(100000000, 999999999);
-  }
-  return dadget.exec(0, {
-    type: "insert",
-    target: id,
-    new: {
-      count: 0,
-      subset: false,
-      data
+async function insertData(dadget, dataLength, length, testNo) {
+  for (let j = 0; j < length; j++) {
+    const id = Dadget.uuidGen();
+    const data = new Array(dataLength);
+    for (let i = 0; i < dataLength; i++) {
+      data[i] = getRandomInt(100000000, 999999999);
     }
-  });
-}
-
-function updateData(dadget, result) {
-  let csn = result.csn;
-  let obj = result.resultSet[0];
-  return dadget.exec(csn, {
-    type: "update",
-    target: obj._id,
-    before: obj,
-    operator: {
-      "$inc": {
-        "count": 1
+    await dadget.exec(0, {
+      type: "insert",
+      target: id,
+      new: {
+        test_no: testNo,
+        subset: j % 2 == 0,
+        data
       }
-    }
-  });
+    });
+  }
 }
 
-function deleteData(dadget, obj) {
-  return dadget.exec(obj.csn, {
-    type: "delete",
-    target: obj._id,
-    before: obj
-  });
+function deleteData(dadget, testNo) {
+  return query(dadget, testNo)
+    .then(async (result) => {
+      const csn = result.csn;
+      for (const obj of result.resultSet) {
+        await dadget.exec(csn, {
+          type: "delete",
+          target: obj._id,
+          before: obj
+        });
+      }
+    });
 }

@@ -1,0 +1,17 @@
+name: benchmark-subset
+serviceEngines:
+- class: DatabaseRegistry
+  database: benchmark
+  metadata:
+    {% ciNodeConfig ref="/c/db/benchmark.yml" %}
+- class: UpdateManager
+  database: benchmark
+  subset: subsetContents
+- class: QueryHandler
+  database: benchmark
+  subset: subsetContents
+- class: SubsetStorage
+  database: benchmark
+  subset: subsetContents
+  exported: true
+  type: persistent

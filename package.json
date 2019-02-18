@@ -14,6 +14,7 @@
   },
   "scripts": {
     "start": "node lib/benchmark.js",
+    "start2": "node lib/benchmark2.js",
     "server": "node lib/server.js",
     "build": "babel src -d lib"
   },
