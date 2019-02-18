@@ -58,17 +58,19 @@ if (cluster.isMaster) {
   let counts = [];
   let queryTimes = [];
   for (let i = 0; i < parallel; i++) {
-    let worker = cluster.fork();
-    worker.on('message', function (msg) {
-      counts.push(msg.count);
-      queryTimes.push(msg.queryTime);
-      if (counts.length == parallel) {
-        let count = counts.reduce((a, x) => a += x, 0);
-        let queryTime = Math.round(queryTimes.reduce((a, x) => a += x, 0) / count);
-        console.log('total count: ' + count);
-        console.log('mean query time(ms): ' + queryTime);
-      }
-    });
+    setTimeout(() => {
+      let worker = cluster.fork();
+      worker.on('message', function (msg) {
+        counts.push(msg.count);
+        queryTimes.push(msg.queryTime);
+        if (counts.length == parallel) {
+          let count = counts.reduce((a, x) => a += x, 0);
+          let queryTime = Math.round(queryTimes.reduce((a, x) => a += x, 0) / count);
+          console.log('total count: ' + count);
+          console.log('mean query time(ms): ' + queryTime);
+        }
+      });
+    }, i * interval / parallel);
   }
 } else {
   doWorker();
