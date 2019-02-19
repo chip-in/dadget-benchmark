@@ -1,7 +1,7 @@
 # dadget-benchmark
 
 ##### 準備
-$ npm i
+$ npm i  
 $ npm run build
 
 ##### 開始コマンド例
