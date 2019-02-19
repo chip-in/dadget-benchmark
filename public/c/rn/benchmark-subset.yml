@@ -4,6 +4,9 @@ serviceEngines:
   database: benchmark
   metadata:
     {% ciNodeConfig ref="/c/db/benchmark.yml" %}
+- class: QueryHandler
+  database: benchmark
+  subset: wholeContents
 - class: UpdateManager
   database: benchmark
   subset: subsetContents
